@@ -158,7 +158,25 @@ next project unlabelled turns this tool into the carrier of the contamination.**
 
 ---
 
-## Screenshots
+## What the report looks like
 
-Interface screenshots are not included yet; they will be captured in the same session as the
-demonstration video.
+All of these are real tool output, not mock-ups.
+
+**Residual diagnosis** — the verdict rests on the **component decomposition**, not on how the
+residual curve looks. This residual falls with frequency rather than being flat; it is called a
+fixture because 1.1 dB of it is frequency-independent:
+
+![Residual diagnosis and decomposition](images/residual-decomposition.png)
+
+**Curve comparison** — above 9 GHz the two lie on top of each other; below 9 GHz there is a
+visible gap. That gap is the fixture's 1 dB:
+
+![Overlay after calibration](images/overlay-after-calibration.png)
+
+**Calibrated parameters** — each carries a confidence range, and an unidentifiable one is
+labelled as such:
+
+![Parameters with confidence ranges](images/parameters-with-range.png)
+
+Screenshots of the interface itself are not included yet; they will be captured in the same
+session as the demonstration video.
