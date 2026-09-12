@@ -41,19 +41,38 @@
 
 | 情境 | 工具的結論 | Dk 誤差 | Df 誤差 |
 |---|---|---|---|
-| 直接校正長線（治具沒處理） | **不可信**（偵測到治具） | +14.3% | +6.6% |
-| Delta-L 相減 | **部分可用**（粗糙度定不出來） | +3.7% | −2.9% |
-| Delta-L ＋ 粗糙度固定 | **可信** | +3.8% | +1.2% |
+| 直接校正長線（治具沒處理） | **不可信**（偵測到治具） | +14.29% | +6.50% |
+| Delta-L 相減 | **部分可用**（粗糙度定不出來） | +3.68% | −3.06% |
+| Delta-L ＋ 粗糙度固定 | **可信** | +3.80% | +1.22% |
 
 三列都是**工具講對了**：
 
 - 第一列有治具，工具說不可信——**它沒有把 0.55 dB 的接頭損耗當成材料損耗報出去**。
 - 第二列沒有東西是錯的，但這組量測撐不起三個自由度。工具給的粗糙度範圍是
-  0.272–1.141 µm，**真值 0.55 µm 就在裡面**。它誠實地說了這件事，而不是報一個好看的
+  0.282–1.141 µm，**真值 0.55 µm 就在裡面**。它誠實地說了這件事，而不是報一個好看的
   數字。
 - 第三列把粗糙度固定成已知值之後，兩個參數都在 4% 以內，判定為可信。
 
 「部分可用」不是失敗，是這個工具存在的理由之一。
+
+### 可重現性
+
+三個情境連跑兩次，參數、殘差與可辨識範圍**逐位元相同**。這件事要明講，因為
+DOE 取樣與差分演化都用亂數——不釘住種子的話，同一份資料每次會給不同的答案，
+而使用者看不出來哪一次該信。
+
+### 第一幕的殘差長什麼樣
+
+判定的依據是**成分分解**，不是殘差曲線的外觀。直接校正長線那次的分解是：
+
+| 成分 | RMS 貢獻（dB） |
+|---|---|
+| 固定偏移 | 1.0987（佔 29%，觸發治具判定） |
+| 正比於 f | 0.8507 |
+| 正比於 √f | 1.8057 |
+
+殘差本身是一條上升的曲線，**不是水平線**。會被認定為治具的原因是「拆出來有
+0.99–1.1 dB 與頻率完全無關」——與頻率無關的損耗不可能來自材料。
 
 ---
 
@@ -125,7 +144,7 @@ Z0 = 54.5 Ω 對 50 Ω 參考時，衰減常數誤差 0.75%；完全匹配時誤
 
 | 範圍 | 項數 |
 |---|---|
-| 後端（pytest） | 147（其中 2 項需要 Ansys Electronics Desktop） |
+| 後端（pytest） | 150（其中 2 項需要 Ansys Electronics Desktop） |
 | 前端（vitest） | 14 |
 
 ---
@@ -140,7 +159,7 @@ added on top. True values: Dk 4.2, Df 0.0135 at 1 GHz, Rq 0.55 µm, stripline 15
 
 Across three scenarios the tool is right every time: it refuses the fixture-contaminated case
 instead of reporting the contaminated Df; it reports the Delta-L case as partially usable
-because roughness is not identifiable, and the range it gives (0.272–1.141 µm) contains the
+because roughness is not identifiable, and the range it gives (0.282–1.141 µm) contains the
 true 0.55 µm; and with roughness fixed it returns both parameters within 4% and calls the
 result trustworthy.
 
