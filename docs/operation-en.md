@@ -132,6 +132,7 @@ verdicts:
 | Residual has a fixed offset | Fixture or connector not de-embedded; Df is contaminated | De-embed, or switch to Delta-L |
 | Residual is not a smooth shape | Resonance or impedance discontinuity, not a material problem | Check the geometry model (vias, layer changes, connectors) |
 | A parameter is not identifiable | This measurement cannot support that many degrees of freedom | Widen the band, or fix one parameter (**Delta-L does not help here**) |
+| A parameter pins at a search bound | The range may be too narrow | Normally, widen it and re-run. **Not when the residual diagnosis also reports a fixture** — the optimizer is using that parameter to store the fixture's frequency-independent loss, and it will take whatever room you give it (measured: widening took the roughness error from +118% to +355%). De-embed, or switch to Delta-L, first |
 | The two models disagree | At least one model does not apply to this structure | Confirm both got the same stackup and geometry, then find which physics differs |
 | Cross-validation did not finish | Requested, but the budget ran out | Raise the cross-validation solve budget and re-run. The verdict is "unknown" and the material library is not marked trustworthy |
 

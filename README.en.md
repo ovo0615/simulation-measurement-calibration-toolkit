@@ -148,7 +148,7 @@ from Q2D — an independent field solve — plus a fixture, VNA noise, calibrati
 connector resonance. That measures whether the tool talks nonsense under model mismatch and
 noise, not whether it can find an answer it planted itself.
 
-Automated tests: 147 back end, 14 front end.
+Automated tests: 157 back end, 14 front end.
 
 ---
 
