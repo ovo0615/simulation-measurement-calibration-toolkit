@@ -61,6 +61,22 @@ Residual shape maps onto physics directly:
 Collapsing the last two into one makes users throw away the good parameters along with the
 bad.
 
+Here is what the three look like in the report. Every image below is real tool output; the
+numbers line up with the three scenarios in the [validation report](docs/validation.md).
+
+![Verdict: not trustworthy](docs/images/verdict-not-trustworthy.png)
+
+The run with the fixture still in. The tool does not report the contaminated Df, and it
+**declines to give the standard "widen the search range" advice** — with the fixture still
+there, widening only lets that parameter absorb more of it.
+
+![Verdict: partially usable](docs/images/verdict-partially-usable.png)
+
+After Delta-L. Nothing is wrong, but this measurement cannot support three degrees of
+freedom. It names the two that may be adopted, and explains why Delta-L does not help here.
+
+![Verdict: trustworthy](docs/images/verdict-trustworthy.png)
+
 The exported material library carries this verdict with it. **A fixture-contaminated Df
 that reaches the next project unlabelled turns this tool into the carrier of the
 contamination rather than the guard against it.**
