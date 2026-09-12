@@ -1,0 +1,11 @@
+# 文字檔在倉庫中統一以 LF 儲存
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+
+# 二進位
+*.png  binary

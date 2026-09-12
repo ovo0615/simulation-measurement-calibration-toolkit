@@ -1,0 +1,24 @@
+# Node
+node_modules/
+*.tsbuildinfo
+
+# 建置產物：這是原始碼展示，不收打包結果
+dist/
+
+# 不得提交任何設計或求解結果
+*.aedb/
+*.aedt
+*.aedtresults/
+*.s*p
+*.q2dcuts.json
+
+# Secrets 機密
+.env
+*.pem
+*.key
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
