@@ -33,12 +33,15 @@ export function SolverPicker({
   onChange,
   disabled,
   parameterCount,
+  analyticOnlyReason = "",
 }: {
   solvers: SolverInfo[];
   value: string;
   onChange: (id: string) => void;
   disabled: boolean;
   parameterCount: number;
+  // 非空時只允許解析截面，其他求解器停用並顯示這段理由（例如差動截面）。
+  analyticOnlyReason?: string;
 }) {
   if (solvers.length === 0) return null;
 
@@ -51,11 +54,13 @@ export function SolverPicker({
         {solvers.map((solver) => {
           const estimate = solves * solver.seconds_per_solve;
           const active = solver.id === value;
+          const blockedHere = Boolean(analyticOnlyReason) && solver.id !== "analytic";
+          const usable = solver.available && !blockedHere;
           return (
             <button
               key={solver.id}
               className="ghost"
-              disabled={disabled || !solver.available}
+              disabled={disabled || !usable}
               onClick={() => onChange(solver.id)}
               style={{
                 textAlign: "left",
@@ -63,8 +68,8 @@ export function SolverPicker({
                 padding: "12px 16px",
                 borderColor: active ? "var(--accent)" : undefined,
                 background: active ? "#eff6ff" : undefined,
-                opacity: solver.available ? 1 : 0.55,
-                cursor: solver.available && !disabled ? "pointer" : "not-allowed",
+                opacity: usable ? 1 : 0.55,
+                cursor: usable && !disabled ? "pointer" : "not-allowed",
               }}
             >
               <div style={{ fontWeight: 600, marginBottom: 2 }}>
@@ -72,7 +77,9 @@ export function SolverPicker({
                 {solver.name}
               </div>
               <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                {solver.available
+                {blockedHere
+                  ? analyticOnlyReason
+                  : solver.available
                   ? `約 ${solves} 次求解，${formatDuration(estimate)}${
                       solver.id === "q2d" ? "（上限；幾何不變的點會重用結果）" : ""
                     }`

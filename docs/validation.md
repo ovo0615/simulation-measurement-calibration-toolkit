@@ -141,14 +141,30 @@ Z0 = 54.5 Ω 對 50 Ω 參考時，衰減常數誤差 0.75%；完全匹配時誤
 出來。這是可辨識性分析存在的唯一理由，也是為什麼本工具的報告永遠先講可不可信、再講
 數字。
 
+## 差動模型對 Q2D
+
+差動對（邊緣耦合帶線）用內建二維場解（邊界元素法）算阻抗，導體損耗用 Wheeler 增量電感法則。
+對 Ansys Q2D Extractor 2026.1 驗證，Q2D 收斂 0.2%，1、5、10、20 GHz 四點，兩邊用同一條介質色散曲線。
+表中是四個頻點裡最大的誤差（模型 − Q2D）：
+
+| 截面 | Zdiff | 延遲（√εeff） | 介電損耗 | 導體損耗 | SDD21 |
+|---|---|---|---|---|---|
+| 典型 100 Ω（線寬 130／線距 180 µm） | +0.22% | −0.18% | −0.18% | +2.00% | −0.67% |
+| 寬線鬆耦合（200／400 µm） | +0.25% | −0.23% | −0.23% | +2.00% | −0.46% |
+| 最緊耦合（150／100 µm） | +0.24% | −0.21% | −0.21% | +3.18% | −1.64% |
+| 允收門檻 | 2% | 0.5% | 2% | 10% | 5% |
+
+第一版用閉式解（Cohn 零厚度解＋厚度修正），在典型 100 Ω 截面 Zdiff 高估 4.5%、導體損耗低估 11%，
+沒有通過，因此改成場解。
+
 ---
 
 ## 自動化測試
 
 | 範圍 | 項數 |
 |---|---|
-| 後端（pytest） | 157（其中 2 項需要 Ansys Electronics Desktop） |
-| 前端（vitest） | 14 |
+| 後端（pytest） | 205（其中 27 項需要 pyedb 或 Ansys Electronics Desktop） |
+| 前端（vitest） | 18 |
 
 ---
 
@@ -175,3 +191,10 @@ verdict, yet Dk differs by 3.7%. That gap is model bias, measurable only with a 
 The Q2D cross-check itself agreed to 0.1% on Z0 and 1.3%–3.6% on insertion loss, and exposed a
 real physics error in the analytical model: stripline was using the microstrip conductor-loss
 formula, overestimating conductor loss roughly threefold.
+
+Differential pairs (edge-coupled stripline) use a built-in 2-D boundary-element field solver
+with Wheeler's incremental-inductance rule for conductor loss. Against Ansys Q2D Extractor
+2026.1 (0.2% convergence, 1/5/10/20 GHz, identical dielectric dispersion on both sides), three
+cross-sections stay within 0.25% on Zdiff, 3.2% on conductor loss and 1.7% on SDD21. The first
+closed-form version (Cohn plus thickness correction) was off by 4.5% on Zdiff and 11% on
+conductor loss for a typical 100 Ω section and was replaced.

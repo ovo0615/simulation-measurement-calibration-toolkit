@@ -27,6 +27,7 @@ import type {
   CalibrationResult,
   CompareResult,
   DeltaLExtraction,
+  DifferentialInfo,
   Finding,
   JobEvent,
   ParameterSpec,
@@ -36,6 +37,7 @@ import type {
 } from "./api";
 import { FileDrop, Findings, NumberField, Svg } from "./components";
 import { DeltaLPanel } from "./DeltaLPanel";
+import { DifferentialPanel } from "./DifferentialPanel";
 import { LayoutPanel } from "./LayoutPanel";
 import { SolverPicker } from "./SolverPicker";
 import { VerdictCard } from "./VerdictCard";
@@ -52,6 +54,12 @@ const DEFAULT_SECTION: SectionSpec = {
   roughness_um: 0.4,
   geometry: "stripline",
 };
+
+// 切到差動帶線時，線距沒填過就先放一個典型 100 歐姆截面的值（w130／s180）。
+const DEFAULT_SPACING_UM = 180;
+
+const DIFFERENTIAL_SOLVER_REASON =
+  "差動截面目前只能用解析截面（內建二維場解，已對 Q2D 驗證）。Q2D 端還沒接差模。";
 
 const STAGE_LABEL: Record<string, string> = {
   doe: "DOE 取樣求解",
@@ -269,6 +277,8 @@ function CalibratePane({
     { name: "FR4.df_ref", value: 0.01, lower: 0.004, upper: 0.025, group: "FR4" },
   ]);
   const [deltaL, setDeltaL] = useState<DeltaLExtraction | null>(null);
+  // 過了 P370 的差模響應。有它時校正用它的 token，不用原始四埠。
+  const [differential, setDifferential] = useState<DifferentialInfo | null>(null);
   const [layoutNet, setLayoutNet] = useState("");
   const [solvers, setSolvers] = useState<SolverInfo[]>([]);
   const [solverId, setSolverId] = useState("analytic");
@@ -306,6 +316,13 @@ function CalibratePane({
   }, [section.material_name]);
 
   useEffect(() => () => stop.current?.(), []);
+
+  const isDifferential = section.geometry === "diff_stripline";
+  // 差動截面只有解析截面能解（後端也會擋）。在這裡就切回去，免得按下開始
+  // 校正才被告知。
+  useEffect(() => {
+    if (isDifferential && solverId !== "analytic") setSolverId("analytic");
+  }, [isDifferential, solverId]);
 
   useEffect(() => {
     listSolvers().then((r) => setSolvers(r.solvers)).catch(() => setSolvers([]));
@@ -353,7 +370,7 @@ function CalibratePane({
     setStatus("");
     try {
       const started = await startCalibration({
-        measured: deltaL ? deltaL.token : measured.token,
+        measured: deltaL ? deltaL.token : differential ? differential.token : measured.token,
         section,
         parameters,
         bands,
@@ -399,7 +416,8 @@ function CalibratePane({
     } finally {
       setBusy(false);
     }
-  }, [measured, deltaL, section, parameters, bands, acknowledgement, solverId, poll]);
+  }, [measured, deltaL, differential, section, parameters, bands, acknowledgement, solverId,
+      crossSolver, crossBudget, poll]);
 
   const progress = useMemo(() => {
     const last = [...events].reverse().find((e) => e.total > 0);
@@ -427,6 +445,7 @@ function CalibratePane({
               // 量測相減出來的，token 與 ΔL 都不再對應——留著的話按下開始
               // 校正會拿舊的差段去校正新的截面，而畫面上完全看不出來。
               setDeltaL(null);
+              setDifferential(null);
               setMeasured(info);
             } catch (exc) {
               setError(exc instanceof Error ? exc.message : String(exc));
@@ -440,7 +459,11 @@ function CalibratePane({
         onSection={(spec, netName) => {
           // Delta-L 相減之後校正的對象是差段，線長由 ΔL 決定。版面讀到的是
           // 那條走線的全長，直接套用會覆寫掉 ΔL——後端會擋，但在這裡就先保住。
-          setSection(deltaL ? { ...spec, length_mm: deltaL.delta_length_mm } : spec);
+          // 差動時版面讀到的是其中一條線，結構與線距保留使用者的設定。
+          const merged = isDifferential
+            ? { ...spec, geometry: section.geometry, spacing_um: section.spacing_um }
+            : spec;
+          setSection(deltaL ? { ...merged, length_mm: deltaL.delta_length_mm } : merged);
           setParameters((current) =>
             current.map((p) =>
               p.name.includes(".dk_ref") || p.name.includes(".df_ref")
@@ -453,8 +476,28 @@ function CalibratePane({
         }}
       />
 
+      <DifferentialPanel
+        measured={measured}
+        differential={differential}
+        disabled={busy}
+        onPrepared={(info) => {
+          setDifferential(info);
+          if (!info) return;
+          // 原始四埠相減出來的 Delta-L 不是差模，留著會被拿去校正差動截面。
+          setDeltaL(null);
+          setSection((current) => ({
+            ...current,
+            geometry: "diff_stripline",
+            spacing_um: current.spacing_um || DEFAULT_SPACING_UM,
+          }));
+        }}
+      />
+
+      {/* key：第一片換了（換檔或轉成差模）就整個重來，舊的第二片與配對不再對應。 */}
       <DeltaLPanel
-        primary={measured}
+        key={differential?.token ?? measured?.token ?? "none"}
+        primary={differential ?? measured}
+        portOrder={differential?.port_order ?? null}
         extraction={deltaL}
         onExtracted={setDeltaL}
         disabled={busy}
@@ -472,7 +515,8 @@ function CalibratePane({
         }
       />
       <BandEditor bands={bands} onChange={setBands} disabled={busy} />
-      <ParameterEditor parameters={parameters} onChange={setParameters} disabled={busy} />
+      <ParameterEditor parameters={parameters} onChange={setParameters} disabled={busy}
+        differential={isDifferential} />
 
       {blocking.length > 0 ? (
         <section className="panel">
@@ -515,6 +559,7 @@ function CalibratePane({
           onChange={setSolverId}
           disabled={busy}
           parameterCount={parameters.length}
+          analyticOnlyReason={isDifferential ? DIFFERENTIAL_SOLVER_REASON : ""}
         />
 
         <label className="field" style={{ marginTop: 12 }}>
@@ -613,6 +658,7 @@ function SectionEditor({
       <p className="hint">
         不需要 layout，有疊構加線寬就能建。stripline 是均質結構，Dk 與延遲直接對應；
         microstrip 有一部分場在空氣中，兩者的公式不同，選錯會讓校正出的 Dk 系統性偏高。
+        {"差動帶線是一對邊緣耦合帶線，用內建二維場解，校正對象是差模 SDD21（響應項填 S21 即可，差模二埠的 S21 就是 SDD21），需要四埠量測先轉成差模。"}
         {source ? `　目前的值讀自版面的 ${source}。` : ""}
       </p>
       <div className="grid3">
@@ -629,10 +675,20 @@ function SectionEditor({
           <select
             value={section.geometry}
             disabled={disabled}
-            onChange={(event) => set({ geometry: event.target.value as SectionSpec["geometry"] })}
+            onChange={(event) => {
+              const geometry = event.target.value as SectionSpec["geometry"];
+              set({
+                geometry,
+                spacing_um:
+                  geometry === "diff_stripline"
+                    ? section.spacing_um || DEFAULT_SPACING_UM
+                    : section.spacing_um,
+              });
+            }}
           >
             <option value="stripline">stripline（帶線）</option>
             <option value="microstrip">microstrip（微帶線）</option>
+            <option value="diff_stripline">diff stripline（差動帶線）</option>
           </select>
         </label>
         <NumberField label="參考頻率（GHz）" value={section.f_ref_ghz} disabled={disabled}
@@ -643,8 +699,13 @@ function SectionEditor({
           onChange={(v) => set({ df: v })} />
         <NumberField label="銅箔粗糙度 Rq（µm）" value={section.roughness_um} step={0.05}
           disabled={disabled} onChange={(v) => set({ roughness_um: v })} />
-        <NumberField label="線寬（µm）" value={section.width_um} disabled={disabled}
+        <NumberField label={section.geometry === "diff_stripline" ? "單條線寬（µm）" : "線寬（µm）"}
+          value={section.width_um} disabled={disabled}
           onChange={(v) => set({ width_um: v })} />
+        {section.geometry === "diff_stripline" ? (
+          <NumberField label="線距，邊到邊（µm）" value={section.spacing_um ?? DEFAULT_SPACING_UM}
+            disabled={disabled} onChange={(v) => set({ spacing_um: v })} />
+        ) : null}
         <NumberField label="介質厚度（µm）" value={section.height_um} disabled={disabled}
           onChange={(v) => set({ height_um: v })} />
         <NumberField label="銅厚（µm）" value={section.thickness_um} disabled={disabled}
@@ -735,16 +796,19 @@ const PARAMETER_CHOICES = [
   { name: "line.thickness_m", label: "銅厚（m）" },
   { name: "line.length_m", label: "線長（m）" },
   { name: "line.conductivity", label: "導電率（S/m）" },
+  { name: "line.spacing_m", label: "線距（m）", differentialOnly: true },
 ];
 
 function ParameterEditor({
   parameters,
   onChange,
   disabled,
+  differential = false,
 }: {
   parameters: ParameterSpec[];
   onChange: (parameters: ParameterSpec[]) => void;
   disabled: boolean;
+  differential?: boolean;
 }) {
   const update = (index: number, patch: Partial<ParameterSpec>) =>
     onChange(parameters.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -780,7 +844,9 @@ function ParameterEditor({
         ))}
       </div>
       <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {PARAMETER_CHOICES.filter((choice) => choice.name).map((choice) => (
+        {PARAMETER_CHOICES.filter(
+          (choice) => choice.name && (differential || !choice.differentialOnly),
+        ).map((choice) => (
           <button key={choice.name} className="ghost" disabled={disabled}
             onClick={() =>
               onChange([...parameters, {

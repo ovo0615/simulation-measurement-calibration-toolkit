@@ -6,8 +6,8 @@
 //   2. 長度必須確認。填錯不會讓任何曲線看起來不對，只會讓 Dk 錯上百倍。
 
 import { useCallback, useState } from "react";
-import { detectDeltaL, extractDeltaL, upload } from "./api";
-import type { DeltaLCandidate, DeltaLExtraction, Finding, UploadInfo } from "./api";
+import { ApiError, detectDeltaL, extractDeltaL, prepareDifferential, upload } from "./api";
+import type { DeltaLCandidate, DeltaLExtraction, Finding, PortOrder, UploadInfo } from "./api";
 import { FileDrop, Findings, NumberField } from "./components";
 
 export function DeltaLPanel({
@@ -15,11 +15,15 @@ export function DeltaLPanel({
   extraction,
   onExtracted,
   disabled,
+  portOrder = null,
 }: {
   primary: UploadInfo | null;
   extraction: DeltaLExtraction | null;
   onExtracted: (extraction: DeltaLExtraction | null) => void;
   disabled: boolean;
+  // 非 null 時第一片是差模：第二片也要用同一個埠序先過 P370、轉成差模，
+  // 後端不讓差模與單端相減。
+  portOrder?: PortOrder | null;
 }) {
   const [enabled, setEnabled] = useState(false);
   const [secondary, setSecondary] = useState<UploadInfo | null>(null);
@@ -28,6 +32,7 @@ export function DeltaLPanel({
   const [lengths, setLengths] = useState({ short: 0, long: 0 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [secondaryBlocked, setSecondaryBlocked] = useState<Finding[]>([]);
 
   const detect = useCallback(
     async (other: UploadInfo) => {
@@ -117,17 +122,36 @@ export function DeltaLPanel({
             busy={false}
             onFile={async (file) => {
               setError("");
+              setSecondaryBlocked([]);
               try {
-                const info = await upload(file, "measured");
+                const raw = await upload(file, "measured");
+                const info = portOrder ? await prepareDifferential(raw.token, portOrder) : raw;
                 setSecondary(info);
                 await detect(info);
               } catch (exc) {
-                setError(exc instanceof Error ? exc.message : String(exc));
+                const detail = exc instanceof ApiError && exc.status === 409
+                  ? (exc.detail as { findings?: Finding[] })
+                  : null;
+                if (detail?.findings?.length) {
+                  // 第二片沒過 P370 一樣擋下、不給覆寫，理由與第一片相同。
+                  setSecondary(null);
+                  setSecondaryBlocked(detail.findings);
+                } else {
+                  setError(exc instanceof Error ? exc.message : String(exc));
+                }
               }
             }}
           />
 
+          {portOrder ? (
+            <p className="hint" style={{ marginTop: 8 }}>
+              {"第一片是差模，另一片會用同一個埠序先做 P370 檢查、轉成差模再相減。"}
+            </p>
+          ) : null}
+
           {error ? <div className="error">{error}</div> : null}
+
+          {secondaryBlocked.length > 0 ? <Findings findings={secondaryBlocked} /> : null}
 
           {noPair ? <Findings findings={[noPair]} /> : null}
 

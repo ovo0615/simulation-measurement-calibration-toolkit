@@ -40,6 +40,8 @@ passivity, reciprocity, low-frequency insertion-loss offset). Both responses are
 onto a common frequency grid and overlaid in magnitude and group delay, with an RMS
 difference.
 
+![Compare mode: pre-flight checks, overall difference and S21 overlay](images/compare-mode.png)
+
 > **A CSV frequency column must state its unit** (`Frequency(Hz)`, `Freq (GHz)`). This tool
 > does not guess — guessing wrong shifts the whole result by an order of magnitude without
 > raising anything.
@@ -50,7 +52,7 @@ difference.
 
 | Step | Action | Note |
 |---|---|---|
-| 1 | Load the measurement | It should be a **uniform transmission line** (a calibration coupon). Back-solving material from a full channel with vias and corners is an ill-posed inverse problem |
+| 1 | Load the measurement | It should be a **uniform transmission line** (a calibration coupon). Back-solving material from a full channel with vias and corners is an ill-posed inverse problem. For four-port differential pairs see the section below |
 | 2 | Enable Delta-L and load a second coupon | Strongly recommended. See below |
 | 3 | Enter the cross-section | Stackup plus trace width is enough. **Choosing stripline where it is microstrip biases Dk high systematically** |
 | 4 | Define calibration bands | Several bands, not necessarily contiguous — e.g. loss at low frequency, resonance at high frequency |
@@ -79,6 +81,42 @@ The cross-section length is locked to ΔL automatically.
 | Wrong length unit | Effective permittivity recovered from group delay, rejected outside 1–20 (entering mm as inch gives 0.15) |
 | Inconsistent fixtures | Loss difference extrapolated to DC still shows a residue |
 | Frequency sampling too coarse | Phase change between adjacent points exceeds π; group delay itself is then wrong |
+
+---
+
+## Differential pairs (four-port measurement)
+
+When the measurement is a four-port Touchstone of an edge-coupled stripline pair, calibration
+mode shows a "differential measurement" panel.
+
+| Step | Action | Note |
+|---|---|---|
+| 1 | Choose the port order | "Ports 1, 2 at the near end" or "ports 1, 3 at the near end". **You choose; the tool does not guess** — the file does not record it |
+| 2 | Click "P370 check and convert to differential" | IEEE P370 frequency-domain quality metrics: causality, passivity, reciprocity. On pass the data becomes a differential two-port (S21 is SDD21, 100 Ω reference) |
+| 3 | Check the cross-section | Switches to "differential stripline"; enter the single-trace width and edge-to-edge spacing. Spacing can also be a calibration parameter |
+| 4 | Start | Only the analytical solver (built-in 2-D field solver) is available |
+
+![Differential measurement after passing the P370 check](images/calibrate-differential-p370.png)
+
+These cases are blocked and **cannot be overridden**:
+
+| Case | Why |
+|---|---|
+| Any differential P370 metric rated "poor" | The optimizer would chase measurement problems with Dk/Df |
+| Low-frequency SDD21 below −6 dB | Wrong port order — that is crosstalk, not transmission. The message shows the value under the other port order |
+| Raw four-port sent straight to calibration | Data that has not passed P370 does not enter calibration |
+| Differential data with a single-ended section, or the reverse | The reference impedance is off by a factor of two; calibration would finish with every number wrong |
+
+![Blocked for a wrong port order](images/calibrate-differential-wrong-port-order.png)
+
+Mode conversion above −20 dB is only a warning: the model assumes a symmetric pair, so the
+converted energy would be absorbed into Df or roughness.
+
+Delta-L works for differential pairs too: after converting the first coupon, enable Delta-L;
+the second coupon goes through the same P370 check with the same port order before the
+division.
+
+Differential calibration does not support the Q2D solver yet.
 
 ---
 

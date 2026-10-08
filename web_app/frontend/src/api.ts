@@ -69,7 +69,9 @@ export interface SectionSpec {
   thickness_um: number;
   length_mm: number;
   roughness_um: number;
-  geometry: "stripline" | "microstrip";
+  // diff_stripline 是邊緣耦合帶線差動對，此時才需要 spacing_um（邊到邊間距）。
+  geometry: "stripline" | "microstrip" | "diff_stripline";
+  spacing_um?: number | null;
 }
 
 export interface IdentifiabilityParam {
@@ -285,6 +287,32 @@ export function watchJob(jobId: string, onEvent: (event: JobEvent) => void): () 
     if (data.stage) onEvent(data);
   };
   return () => socket.close();
+}
+
+// ── 差動量測 ────────────────────────────────────────────────
+
+// 埠序由人選、不用猜的（見後端 mixedmode.py）。後端也有一份清單
+// （/api/differential/port_orders），這裡寫死是為了離線也能畫出選單；
+// id 錯了後端會直接回 400。
+export const PORT_ORDERS = [
+  { id: "13_24", label: "埠 1、2 在近端（1→3、2→4 同一條線）" },
+  { id: "12_34", label: "埠 1、3 在近端（1→2、3→4 同一條線）" },
+] as const;
+export type PortOrder = (typeof PORT_ORDERS)[number]["id"];
+
+export interface DifferentialInfo extends UploadInfo {
+  port_order: PortOrder;
+  port_order_label: string;
+  mode_conversion_db: number;
+  findings: Finding[];
+}
+
+export async function prepareDifferential(token: string, portOrder: PortOrder) {
+  return request<DifferentialInfo>("/api/differential", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, port_order: portOrder }),
+  });
 }
 
 export interface DeltaLCandidate {

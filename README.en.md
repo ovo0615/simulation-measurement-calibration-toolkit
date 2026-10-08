@@ -164,7 +164,10 @@ from Q2D — an independent field solve — plus a fixture, VNA noise, calibrati
 connector resonance. That measures whether the tool talks nonsense under model mismatch and
 noise, not whether it can find an answer it planted itself.
 
-Automated tests: 157 back end, 14 front end.
+The built-in field solver for differential pairs agrees with Q2D within 0.25% on Zdiff and
+3.2% on conductor loss across three cross-sections.
+
+Automated tests: 205 back end (27 of them need pyedb or Ansys Electronics Desktop), 18 front end.
 
 ---
 
@@ -185,8 +188,8 @@ Each calibration produces four things:
 | Layer | Content |
 |---|---|
 | Front end | React 18, TypeScript, Vite; SVG charts drawn directly, no charting library |
-| Back end (private) | FastAPI, NumPy, SciPy (differential evolution and L-BFGS-B), scikit-rf, scikit-learn |
-| Solvers | Analytical cross-section (stripline/microstrip), Ansys Q2D Extractor via PyAEDT |
+| Back end (private) | FastAPI, NumPy, SciPy (differential evolution and L-BFGS-B), scikit-rf (including IEEE P370 quality metrics), scikit-learn |
+| Solvers | Analytical cross-section (stripline/microstrip), built-in 2-D field solver for edge-coupled differential stripline, Ansys Q2D Extractor via PyAEDT |
 | Layout | Ansys EDB / ODB++ reading and cutout (pyedb) |
 
 ---

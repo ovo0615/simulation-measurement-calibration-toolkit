@@ -152,7 +152,9 @@ S21(長) / S21(短) = F1·exp(−γL2)·F2 / (F1·exp(−γL1)·F2) = exp(−γ�
 治具、VNA 雜訊、校準殘差與接頭共振。這樣測到的才是「工具面對模型失配與雜訊時
 會不會亂講話」，而不是「工具找不找得到自己埋的答案」。
 
-自動化測試：後端 157 項、前端 14 項。
+差動對的內建場解對 Q2D：Zdiff 差 0.25% 以內、導體損耗 3.2% 以內（三個截面）。
+
+自動化測試：後端 205 項（其中 27 項需要 pyedb 或 Ansys Electronics Desktop）、前端 18 項。
 
 ---
 
@@ -173,8 +175,8 @@ S21(長) / S21(短) = F1·exp(−γL2)·F2 / (F1·exp(−γL1)·F2) = exp(−γ�
 | 層 | 內容 |
 |---|---|
 | 前端 | React 18、TypeScript、Vite；SVG 圖表自繪，無圖表函式庫 |
-| 後端（私有） | FastAPI、NumPy、SciPy（差分演化與 L-BFGS-B）、scikit-rf、scikit-learn |
-| 求解器 | 解析截面（帶線／微帶線）、Ansys Q2D Extractor（PyAEDT） |
+| 後端（私有） | FastAPI、NumPy、SciPy（差分演化與 L-BFGS-B）、scikit-rf（含 IEEE P370 品質指標）、scikit-learn |
+| 求解器 | 解析截面（帶線／微帶線）、邊緣耦合差動帶線的內建二維場解、Ansys Q2D Extractor（PyAEDT） |
 | 版面 | Ansys EDB／ODB++ 讀取與裁切（pyedb） |
 
 ---

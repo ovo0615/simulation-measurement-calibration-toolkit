@@ -9,9 +9,11 @@
 // 抽出來之後可以真的渲染它。這與後端把 export_for、release_and_report 抽成
 // 函式是同一件事：**測試需要複製產品邏輯，就代表產品缺一個可以打的東西。**
 
-import type { Conclusion } from "./api";
+import type { Conclusion, Tone } from "./api";
 
-const TONE_CLASS: Record<string, string> = {
+// 鍵型別是 Tone 而不是 string：後端與 api.ts 加了新語氣卻漏了這裡時，
+// tsc 會直接報錯，不會等到執行時才靜默退回 "bad"。
+const TONE_CLASS: Record<Tone, string> = {
   good: "ok",
   caution: "partial",
   bad: "bad",
